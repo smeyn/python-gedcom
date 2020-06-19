@@ -42,6 +42,7 @@ class IndividualElement(Element):
     def get_tag(self):
         return gedcom.tags.GEDCOM_TAG_INDIVIDUAL
 
+    @property
     def is_deceased(self):
         """Checks if this individual is deceased
         :rtype: bool
@@ -52,6 +53,7 @@ class IndividualElement(Element):
 
         return False
 
+    @property
     def is_child(self):
         """Checks if this element is a child of a family
         :rtype: bool
@@ -64,6 +66,7 @@ class IndividualElement(Element):
 
         return found_child
 
+    @property
     def is_private(self):
         """Checks if this individual is marked private
         :rtype: bool
@@ -75,6 +78,10 @@ class IndividualElement(Element):
                     return True
 
         return False
+
+    @property
+    def name(self):
+        return self.get_name()
 
     def get_name(self):
         """Returns an individual's names as a tuple: (`str` given_name, `str` surname)
@@ -146,6 +153,10 @@ class IndividualElement(Element):
         (given_name, surname) = self.get_name()
         return regex.search(given_name_to_match, given_name, regex.IGNORECASE)
 
+    @property
+    def gender(self):
+        return get_gender()
+
     def get_gender(self):
         """Returns the gender of a person in string format
         :rtype: str
@@ -157,6 +168,10 @@ class IndividualElement(Element):
                 gender = child.get_value()
 
         return gender
+
+    @property
+    def birth(self):
+        return self.get_birth_data()
 
     def get_birth_data(self):
         """Returns the birth data of a person formatted as a tuple: (`str` date, `str` place, `list` sources)
@@ -200,6 +215,10 @@ class IndividualElement(Element):
             return int(date)
         except ValueError:
             return -1
+
+    @property
+    def death(self):
+        return self.get_death_data()
 
     def get_death_data(self):
         """Returns the death data of a person formatted as a tuple: (`str` date, `str` place, `list` sources)
@@ -249,6 +268,10 @@ class IndividualElement(Element):
         """
         self.get_burial_data()
 
+    @property
+    def burial(self):
+        return self.get_burial_data()
+
     def get_burial_data(self):
         """Returns the burial data of a person formatted as a tuple: (`str` date, `str´ place, `list` sources)
         :rtype: tuple
@@ -279,6 +302,43 @@ class IndividualElement(Element):
         :rtype: list of tuple
         """
         self.get_census_data()
+
+    @property
+    def census(self):
+        return self.get_census_data()
+
+    @property
+    def FAMC(self):
+        """find the family where this person is a child"""
+        for c in self.get_child_elements():
+            if c.tag == 'FAMC':
+                return self.find(c.value)
+        return None
+
+    @property
+    def FAMS(self):
+        """find a family where this person is a spouse"""
+        for c in self.get_child_elements():
+            if c.tag == 'FAMS':
+                return self.find(c.value)
+        return None
+
+    @property
+    def children(self):
+        family = self.FAMS
+        return family.find_by_tag('CHIL')
+
+    @property
+    def siblings(self):
+        family = self.FAMC
+        all_children = family.find_by_tag('CHIL')
+        return [child for child in all_children if self.pointer != child.pointer]
+
+    @property
+    def parents(self):
+        """return a tuple of individuals that are makred as parent"""
+        family = self.FAMC
+        return (family.HUSB, family.WIFE)
 
     def get_census_data(self):
         """Returns a list of censuses of an individual formatted as tuples: (`str` date, `str´ place, `list` sources)
@@ -321,6 +381,10 @@ class IndividualElement(Element):
                         date = childOfChild.get_value()
 
         return date
+
+    @property
+    def occupation(self):
+        return self.get_occupation()
 
     def get_occupation(self):
         """Returns the occupation of a person

@@ -64,6 +64,7 @@ class Element(object):
 
     def __init__(self, level, pointer, tag, value, crlf="\n", multi_line=True):
         # basic element info
+
         self.__level = level
         self.__pointer = pointer
         self.__tag = tag
@@ -77,11 +78,43 @@ class Element(object):
         if multi_line:
             self.set_multi_line_value(value)
 
+    def find_by_tag(self, tag):
+        if self.__tag == tag:
+            return[self]
+        else:
+            result = []
+            for child in self.__children:
+                result.extend(child.find_by_tag(tag))
+            return result
+
+    def find(self, id):
+        """find anywhere an element with the givben id"""
+        if self.is_root:
+            for element in self.__children:
+                if element.get_pointer() == id:
+                    return element
+            return None
+        else:
+            root = self.root
+            return root.find(id)
+
     def get_level(self):
         """Returns the level of this element from within the GEDCOM file
         :rtype: int
         """
         return self.__level
+
+    @property
+    def pointer(self):
+        return self.__pointer
+
+    @property
+    def tag(self):
+        return self.__tag
+
+    @property
+    def value(self):
+        return self.__value
 
     def get_pointer(self):
         """Returns the pointer of this element from within the GEDCOM file
@@ -140,7 +173,10 @@ class Element(object):
         if total_characters <= available_characters:
             return total_characters
         spaces = 0
-        while spaces < available_characters and line[available_characters - spaces - 1] == ' ':
+        while (
+            spaces < available_characters and
+            line[available_characters - spaces - 1] == " "
+        ):
             spaces += 1
         if spaces == available_characters:
             return available_characters
@@ -171,15 +207,24 @@ class Element(object):
         index = 0
         size = len(string)
         while index < size:
-            index += self.__add_bounded_child(gedcom.tags.GEDCOM_TAG_CONCATENATION, string[index:])
+            index += self.__add_bounded_child(
+                gedcom.tags.GEDCOM_TAG_CONCATENATION, string[index:]
+            )
 
     def set_multi_line_value(self, value):
         """Sets the value of this element, adding concatenation and continuation lines when necessary
         :type value: str
         """
-        self.set_value('')
-        self.get_child_elements()[:] = [child for child in self.get_child_elements() if
-                                        child.get_tag() not in (gedcom.tags.GEDCOM_TAG_CONCATENATION, gedcom.tags.GEDCOM_TAG_CONTINUED)]
+        self.set_value("")
+        self.get_child_elements()[:] = [
+            child
+            for child in self.get_child_elements()
+            if child.get_tag()
+            not in (
+                gedcom.tags.GEDCOM_TAG_CONCATENATION,
+                gedcom.tags.GEDCOM_TAG_CONTINUED,
+            )
+        ]
 
         lines = value.splitlines()
         if lines:
@@ -188,7 +233,8 @@ class Element(object):
             self.__add_concatenation(line[n:])
 
             for line in lines:
-                n = self.__add_bounded_child(gedcom.tags.GEDCOM_TAG_CONTINUED, line)
+                n = self.__add_bounded_child(
+                    gedcom.tags.GEDCOM_TAG_CONTINUED, line)
                 self.__add_concatenation(line[n:])
 
     def get_child_elements(self):
@@ -212,15 +258,25 @@ class Element(object):
 
         # Differentiate between the type of the new child element
         if tag == gedcom.tags.GEDCOM_TAG_FAMILY:
-            child_element = FamilyElement(self.get_level() + 1, pointer, tag, value, self.__crlf)
+            child_element = FamilyElement(
+                self.get_level() + 1, pointer, tag, value, self.__crlf
+            )
         elif tag == gedcom.tags.GEDCOM_TAG_FILE:
-            child_element = FileElement(self.get_level() + 1, pointer, tag, value, self.__crlf)
+            child_element = FileElement(
+                self.get_level() + 1, pointer, tag, value, self.__crlf
+            )
         elif tag == gedcom.tags.GEDCOM_TAG_INDIVIDUAL:
-            child_element = IndividualElement(self.get_level() + 1, pointer, tag, value, self.__crlf)
+            child_element = IndividualElement(
+                self.get_level() + 1, pointer, tag, value, self.__crlf
+            )
         elif tag == gedcom.tags.GEDCOM_TAG_OBJECT:
-            child_element = ObjectElement(self.get_level() + 1, pointer, tag, value, self.__crlf)
+            child_element = ObjectElement(
+                self.get_level() + 1, pointer, tag, value, self.__crlf
+            )
         else:
-            child_element = Element(self.get_level() + 1, pointer, tag, value, self.__crlf)
+            child_element = Element(
+                self.get_level() + 1, pointer, tag, value, self.__crlf
+            )
 
         self.add_child_element(child_element)
 
@@ -235,6 +291,22 @@ class Element(object):
         element.set_parent_element(self)
 
         return element
+
+    @property
+    def is_root(self):
+        return self.__parent is None
+
+    @property
+    def root(self):
+        """return the root element"""
+        if self.is_root:
+            return self
+        else:
+            return self.__parent.root
+
+    @property
+    def parent(self):
+        return self.get_parent_element()
 
     def get_parent_element(self):
         """Returns the parent element of this element
@@ -269,17 +341,17 @@ class Element(object):
         result = str(self.get_level())
 
         if self.get_pointer() != "":
-            result += ' ' + self.get_pointer()
+            result += " " + self.get_pointer()
 
-        result += ' ' + self.get_tag()
+        result += " " + self.get_tag()
 
         if self.get_value() != "":
-            result += ' ' + self.get_value()
+            result += " " + self.get_value()
 
         result += self.__crlf
 
         if self.get_level() < 0:
-            result = ''
+            result = ""
 
         if recursive:
             for child_element in self.get_child_elements():
@@ -292,4 +364,4 @@ class Element(object):
         if version_info[0] >= 3:
             return self.to_gedcom_string()
 
-        return self.to_gedcom_string().encode('utf-8-sig')
+        return self.to_gedcom_string().encode("utf-8-sig")

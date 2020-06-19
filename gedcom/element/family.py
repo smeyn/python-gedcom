@@ -39,3 +39,19 @@ class FamilyElement(Element):
 
     def get_tag(self):
         return gedcom.tags.GEDCOM_TAG_FAMILY
+
+    @property
+    def HUSB(self):
+        spouse_list = self.find_by_tag('HUSB')
+        if len(spouse_list) > 0:
+            return self.find(spouse_list[0].value)
+        else:
+            return None
+
+    @property
+    def WIFE(self):
+        spouse_list = self.find_by_tag('WIFE')
+        if len(spouse_list) > 0:
+            return self.find(spouse_list[0].value)
+        else:
+            return None
