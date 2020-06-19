@@ -39,6 +39,10 @@ class NotAnActualIndividualError(Exception):
 
 class IndividualElement(Element):
 
+    @property
+    def is_individual(self):
+        return True
+
     def get_tag(self):
         return gedcom.tags.GEDCOM_TAG_INDIVIDUAL
 
@@ -457,13 +461,17 @@ class IndividualElement(Element):
         :type criteria: str
         :rtype: bool
         """
-
+        allowed_keys = {'surname', 'name', 'birth',
+                        'birth_range', 'death', 'death_range'}
         # Check if criteria is a valid criteria and can be split by `:` and `=` characters
-        try:
-            for criterion in criteria.split(':'):
-                criterion.split('=')
-        except ValueError:
-            return False
+        for criterion in criteria.split(':'):
+            if not '=' in criterion:
+                raise ValueError(f'Invalid match criteria {criterion}')
+            parts = criterion.split('=')
+            if len(parts) != 2:
+                raise ValueError(f'Invalid match criteria {criterion}')
+            if not parts[0] in allowed_keys:
+                raise ValueError(f'unknown match key {parts[0]}')
 
         match = True
 
@@ -471,17 +479,16 @@ class IndividualElement(Element):
             key, value = criterion.split('=')
 
             if key == "surname" and not self.surname_match(value):
-                match = False
+                return False
             elif key == "name" and not self.given_name_match(value):
-                match = False
+                return False
             elif key == "birth":
-
                 try:
                     year = int(value)
                     if not self.birth_year_match(year):
-                        match = False
+                        return False
                 except ValueError:
-                    match = False
+                    return False
 
             elif key == "birth_range":
 
@@ -490,18 +497,18 @@ class IndividualElement(Element):
                     from_year = int(from_year)
                     to_year = int(to_year)
                     if not self.birth_range_match(from_year, to_year):
-                        match = False
+                        return False
                 except ValueError:
-                    match = False
+                    return False
 
             elif key == "death":
 
                 try:
                     year = int(value)
                     if not self.death_year_match(year):
-                        match = False
+                        return False
                 except ValueError:
-                    match = False
+                    return False
 
             elif key == "death_range":
 
@@ -510,8 +517,8 @@ class IndividualElement(Element):
                     from_year = int(from_year)
                     to_year = int(to_year)
                     if not self.death_range_match(from_year, to_year):
-                        match = False
+                        return False
                 except ValueError:
-                    match = False
+                    return False
 
         return match

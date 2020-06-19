@@ -78,6 +78,14 @@ class Element(object):
         if multi_line:
             self.set_multi_line_value(value)
 
+    @property
+    def is_individual(self):
+        return False
+
+    @property
+    def is_family(self):
+        return False
+
     def find_by_tag(self, tag):
         if self.__tag == tag:
             return[self]

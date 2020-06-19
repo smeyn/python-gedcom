@@ -154,7 +154,8 @@ class Parser(object):
         last_element = self.get_root_element()
 
         for line in gedcom_stream:
-            last_element = self.__parse_line(line_number, line.decode('utf-8-sig'), last_element, strict)
+            last_element = self.__parse_line(
+                line_number, line.decode('utf-8-sig'), last_element, strict)
             line_number += 1
 
     # Private methods
@@ -190,13 +191,14 @@ class Parser(object):
         end_of_line_regex = '([\r\n]{1,2})'
 
         # Complete regex
-        gedcom_line_regex = level_regex + pointer_regex + tag_regex + value_regex + end_of_line_regex
+        gedcom_line_regex = level_regex + pointer_regex + \
+            tag_regex + value_regex + end_of_line_regex
         regex_match = regex.match(gedcom_line_regex, line)
 
         if regex_match is None:
             if strict:
-                error_message = ("Line <%d:%s> of document violates GEDCOM format 5.5" % (line_number, line)
-                                 + "\nSee: https://chronoplexsoftware.com/gedcomvalidator/gedcom/gedcom-5.5.pdf")
+                error_message = ("Line <%d:%s> of document violates GEDCOM format 5.5" % (line_number, line) +
+                                 "\nSee: https://chronoplexsoftware.com/gedcomvalidator/gedcom/gedcom-5.5.pdf")
                 raise GedcomFormatViolationError(error_message)
             else:
                 # Quirk check - see if this is a line without a CRLF (which could be the last line)
@@ -238,22 +240,27 @@ class Parser(object):
 
         # Check level: should never be more than one higher than previous line.
         if level > last_element.get_level() + 1:
-            error_message = ("Line %d of document violates GEDCOM format 5.5" % line_number
-                             + "\nLines must be no more than one level higher than previous line."
-                             + "\nSee: https://chronoplexsoftware.com/gedcomvalidator/gedcom/gedcom-5.5.pdf")
+            error_message = ("Line %d of document violates GEDCOM format 5.5" % line_number +
+                             "\nLines must be no more than one level higher than previous line." +
+                             "\nSee: https://chronoplexsoftware.com/gedcomvalidator/gedcom/gedcom-5.5.pdf")
             raise GedcomFormatViolationError(error_message)
 
         # Create element. Store in list and dict, create children and parents.
         if tag == gedcom.tags.GEDCOM_TAG_INDIVIDUAL:
-            element = IndividualElement(level, pointer, tag, value, crlf, multi_line=False)
+            element = IndividualElement(
+                level, pointer, tag, value, crlf, multi_line=False)
         elif tag == gedcom.tags.GEDCOM_TAG_FAMILY:
-            element = FamilyElement(level, pointer, tag, value, crlf, multi_line=False)
+            element = FamilyElement(
+                level, pointer, tag, value, crlf, multi_line=False)
         elif tag == gedcom.tags.GEDCOM_TAG_FILE:
-            element = FileElement(level, pointer, tag, value, crlf, multi_line=False)
+            element = FileElement(level, pointer, tag,
+                                  value, crlf, multi_line=False)
         elif tag == gedcom.tags.GEDCOM_TAG_OBJECT:
-            element = ObjectElement(level, pointer, tag, value, crlf, multi_line=False)
+            element = ObjectElement(
+                level, pointer, tag, value, crlf, multi_line=False)
         else:
-            element = Element(level, pointer, tag, value, crlf, multi_line=False)
+            element = Element(level, pointer, tag, value,
+                              crlf, multi_line=False)
 
         # Start with last element as parent, back up if necessary.
         parent_element = last_element
@@ -277,6 +284,28 @@ class Parser(object):
 
     # Methods for analyzing individuals and relationships between individuals
 
+    def match(self, criteria):
+        """finds all individuals thatmatches all of the given criteria
+
+        `criteria` is a colon-separated list, where each item in the
+        list has the form [name]=[value]. The following criteria are supported:
+
+        surname=[name]
+             Match a person with [name] in any part of the `surname`.
+        given_name=[given_name]
+             Match a person with [given_name] in any part of the given `given_name`.
+        birth=[year]
+             Match a person whose birth year is a four-digit [year].
+        birth_range=[from_year-to_year]
+             Match a person whose birth year is in the range of years from
+             [from_year] to [to_year], including both [from_year] and [to_year].
+
+        :type criteria: str
+        :rtype: bool
+        """
+        return [element for element in self.get_element_list()
+                if isinstance(element, IndividualElement) and element.criteria_match(criteria)]
+
     def get_marriages(self, individual):
         """Returns a list of marriages of an individual formatted as a tuple (`str` date, `str` place)
         :type individual: IndividualElement
@@ -288,7 +317,8 @@ class Parser(object):
                 "Operation only valid for elements with %s tag" % gedcom.tags.GEDCOM_TAG_INDIVIDUAL
             )
         # Get and analyze families where individual is spouse.
-        families = self.get_families(individual, gedcom.tags.GEDCOM_TAG_FAMILY_SPOUSE)
+        families = self.get_families(
+            individual, gedcom.tags.GEDCOM_TAG_FAMILY_SPOUSE)
         for family in families:
             for family_data in family.get_child_elements():
                 if family_data.get_tag() == gedcom.tags.GEDCOM_TAG_MARRIAGE:
@@ -315,7 +345,8 @@ class Parser(object):
             )
 
         # Get and analyze families where individual is spouse.
-        families = self.get_families(individual, gedcom.tags.GEDCOM_TAG_FAMILY_SPOUSE)
+        families = self.get_families(
+            individual, gedcom.tags.GEDCOM_TAG_FAMILY_SPOUSE)
         for family in families:
             for child in family.get_child_elements():
                 if child.get_tag() == gedcom.tags.GEDCOM_TAG_MARRIAGE:
@@ -380,9 +411,9 @@ class Parser(object):
         element_dictionary = self.get_element_dictionary()
 
         for child_element in individual.get_child_elements():
-            is_family = (child_element.get_tag() == family_type
-                         and child_element.get_value() in element_dictionary
-                         and element_dictionary[child_element.get_value()].is_family())
+            is_family = (child_element.get_tag() == family_type and
+                         child_element.get_value() in element_dictionary and
+                         element_dictionary[child_element.get_value()].is_family())
             if is_family:
                 families.append(element_dictionary[child_element.get_value()])
 
@@ -428,7 +459,8 @@ class Parser(object):
             )
 
         parents = []
-        families = self.get_families(individual, gedcom.tags.GEDCOM_TAG_FAMILY_CHILD)
+        families = self.get_families(
+            individual, gedcom.tags.GEDCOM_TAG_FAMILY_CHILD)
 
         for family in families:
             if parent_type == "NAT":
@@ -440,9 +472,11 @@ class Parser(object):
                         for child in family_member.get_child_elements():
                             if child.get_value() == "Natural":
                                 if child.get_tag() == gedcom.tags.GEDCOM_PROGRAM_DEFINED_TAG_MREL:
-                                    parents += self.get_family_members(family, gedcom.tags.GEDCOM_TAG_WIFE)
+                                    parents += self.get_family_members(
+                                        family, gedcom.tags.GEDCOM_TAG_WIFE)
                                 elif child.get_tag() == gedcom.tags.GEDCOM_PROGRAM_DEFINED_TAG_FREL:
-                                    parents += self.get_family_members(family, gedcom.tags.GEDCOM_TAG_HUSBAND)
+                                    parents += self.get_family_members(
+                                        family, gedcom.tags.GEDCOM_TAG_HUSBAND)
             else:
                 parents += self.get_family_members(family, "PARENTS")
 
@@ -465,7 +499,8 @@ class Parser(object):
         else:
             parents = self.get_parents(descendant, "NAT")
             for parent in parents:
-                potential_path = self.find_path_to_ancestor(parent, ancestor, path + [parent])
+                potential_path = self.find_path_to_ancestor(
+                    parent, ancestor, path + [parent])
                 if potential_path is not None:
                     return potential_path
 
@@ -496,13 +531,13 @@ class Parser(object):
 
         for child_element in family.get_child_elements():
             # Default is ALL
-            is_family = (child_element.get_tag() == gedcom.tags.GEDCOM_TAG_HUSBAND
-                         or child_element.get_tag() == gedcom.tags.GEDCOM_TAG_WIFE
-                         or child_element.get_tag() == gedcom.tags.GEDCOM_TAG_CHILD)
+            is_family = (child_element.get_tag() == gedcom.tags.GEDCOM_TAG_HUSBAND or
+                         child_element.get_tag() == gedcom.tags.GEDCOM_TAG_WIFE or
+                         child_element.get_tag() == gedcom.tags.GEDCOM_TAG_CHILD)
 
             if members_type == FAMILY_MEMBERS_TYPE_PARENTS:
-                is_family = (child_element.get_tag() == gedcom.tags.GEDCOM_TAG_HUSBAND
-                             or child_element.get_tag() == gedcom.tags.GEDCOM_TAG_WIFE)
+                is_family = (child_element.get_tag() == gedcom.tags.GEDCOM_TAG_HUSBAND or
+                             child_element.get_tag() == gedcom.tags.GEDCOM_TAG_WIFE)
             elif members_type == FAMILY_MEMBERS_TYPE_HUSBAND:
                 is_family = child_element.get_tag() == gedcom.tags.GEDCOM_TAG_HUSBAND
             elif members_type == FAMILY_MEMBERS_TYPE_WIFE:
@@ -511,7 +546,8 @@ class Parser(object):
                 is_family = child_element.get_tag() == gedcom.tags.GEDCOM_TAG_CHILD
 
             if is_family and child_element.get_value() in element_dictionary:
-                family_members.append(element_dictionary[child_element.get_value()])
+                family_members.append(
+                    element_dictionary[child_element.get_value()])
 
         return family_members
 
@@ -529,4 +565,5 @@ class Parser(object):
         if version_info[0] >= 3:
             open_file.write(self.get_root_element().to_gedcom_string(True))
         else:
-            open_file.write(self.get_root_element().to_gedcom_string(True).encode('utf-8-sig'))
+            open_file.write(self.get_root_element(
+            ).to_gedcom_string(True).encode('utf-8-sig'))

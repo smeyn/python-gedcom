@@ -11,6 +11,7 @@ class TestIndividualMethods(unittest.TestCase):
         gedcom_parser = Parser()
         file_path = 'tests/files/Musterstammbaum.ged'
         gedcom_parser.parse_file(file_path)
+        self.parser = gedcom_parser
         self.root = gedcom_parser.get_root_element()
         self.child_elements = gedcom_parser.get_root_child_elements()
 
@@ -34,3 +35,13 @@ class TestIndividualMethods(unittest.TestCase):
         e1 = self.child_elements[1]
         found = e1.children
         self.assertIsNotNone(found)
+
+    def test_match(self):
+        result = self.parser.match('surname=Mustereisen:name=Anneliese')
+        self.assertEqual(len(result), 1)
+        self.assertTrue(result[0].is_individual)
+
+    def test_match_invalid_key(self):
+        """an invalid key should result in a value error"""
+        with self.assertRaises(ValueError):
+            self.parser.match('surname=Mustereisen:given_name=Anneliese')
